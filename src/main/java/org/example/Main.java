@@ -1,52 +1,81 @@
 package org.example;
 
+import org.example.data.DatasetFactory;
+import org.example.data.ShapeSample;
 import org.example.model.NeuralNetwork;
 
+import java.util.List;
+
 public class Main {
+
     public static void main(String[] args) {
-        double[][] xorInputs = {
-                {0.0, 0.0},
-                {0.0, 1.0},
-                {1.0, 0.0},
-                {1.0, 1.0}
-        };
+        System.out.println("INITIALIZING NETWORK FOR RECOGNITION SHAPE...");
+        NeuralNetwork nn = new NeuralNetwork(49,16,3);
 
-        double[][] xorTargets = {
-                {0.0},
-                {1.0},
-                {1.0},
-                {0.0}
-        };
-
-        NeuralNetwork nn = new NeuralNetwork(2, 4, 1);
-
-        double learningRate = 0.5;
-        int maxEpochs = 10_000;
+        List<ShapeSample> trainSet = DatasetFactory.getTrainingSet();
+        double learningRate = 0.3; //recommend
+        int maxEpochs = 20_000;
         double targetError = 0.001;
 
-        System.out.println("Start learning XOR...");
+        System.out.println("START LEARNING...");
+        long startTime = System.currentTimeMillis();
+        int epoch = 0;
+        double epochError = 1.0;
 
-        for (int epoch = 1; epoch <= maxEpochs; epoch++) {
-            double epochError = 0.0;
-            for (int i = 0; i < xorInputs.length; i++) {
-                epochError += nn.trainSample(xorInputs[i], xorTargets[i], learningRate);
+        for (epoch = 1; epoch <= maxEpochs; epoch++) {
+            epochError = 0.0;
+            for (ShapeSample sample : trainSet) {
+                epochError += nn.trainSample(sample.inputs(), sample.targets(), learningRate);
             }
 
-            if (epoch % 1000 == 0 || epochError < targetError) {
-                System.out.printf("Epoch %5d | Summary Error: %.6f%n", epoch, epochError);
+            if (epoch % 500 == 0 || epochError < targetError) {
+                System.out.printf("Epoch: %5d | Error: %.6f%n", epoch, epochError);
             }
 
             if (epochError < targetError) {
-                System.out.printf("Network close to %d epoch!%n", epoch);
                 break;
             }
         }
 
-        System.out.println("\nResults checking XOR:");
-        for (int i = 0; i < xorInputs.length; i++) {
-            double[] pred = nn.predict(xorInputs[i]);
-            System.out.printf("Input: [%.0f, %.0f] -> Waiting: %.0f | Output network: %.4f%n",
-                    xorInputs[i][0], xorInputs[i][1], xorTargets[i][0], pred[0]);
+        long trainingDurationMs = System.currentTimeMillis() - startTime;
+        System.out.println("--------------------------------------------------");
+        System.out.printf("Learning ended for : %d мс%n", trainingDurationMs);
+        System.out.printf("Amount epoches: %d%n", Math.min(epoch, maxEpochs));
+        System.out.printf("Final error: %.6f%n", epochError);
+
+        System.out.println("\n=== CHECK BASE SHAPE ===");
+        for (ShapeSample sample : trainSet) {
+            testSample(nn, sample);
         }
+
+        System.out.println("\n=== CHECK BAD SHAPE ===");
+
+        // 4.1. Успешное распознавание с лёгким шумом (инверсия 2 пикселей)
+        System.out.println(">>> TEST 1: some noise (2 dead pixels) - recognition:");
+        ShapeSample noisyCircle = DatasetFactory.createDistortedSample(DatasetFactory.CIRCLE, 2, 42);
+        testSample(nn, noisyCircle);
+
+        ShapeSample noisySquare = DatasetFactory.createDistortedSample(DatasetFactory.SQUARE, 2, 99);
+        testSample(nn, noisySquare);
+
+        System.out.println(">>> TEST 2: Loud noise (18 dead pixels) - no recognition:");
+        ShapeSample heavyNoisyTriangle = DatasetFactory.createDistortedSample(DatasetFactory.TRIANGLE, 18, 777);
+        testSample(nn, heavyNoisyTriangle);
+    }
+
+    private static void testSample(NeuralNetwork nn, ShapeSample sample) {
+        double[] output = nn.predict(sample.inputs());
+
+        // argmax
+        String[] classNames = {"Circle", "Square", "Triangle"};
+        int bestClass = 0;
+        for (int i = 1; i < output.length; i++) {
+            if (output[i] > output[bestClass]) {
+                bestClass = i;
+            }
+        }
+
+        System.out.printf("Shape: %-15s -> Recognition as: %-11s | Probabilities: [Circle: %.3f, Square: %.3f, Triangle: %.3f]%n",
+                sample.name(), classNames[bestClass], output[0], output[1], output[2]);
     }
 }
