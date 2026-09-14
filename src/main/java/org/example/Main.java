@@ -1,5 +1,6 @@
 package org.example;
 
+import org.example.benchmark.LatencyProfiler;
 import org.example.data.DatasetFactory;
 import org.example.data.ShapeSample;
 import org.example.model.NeuralNetwork;
@@ -50,7 +51,7 @@ public class Main {
 
         System.out.println("\n=== CHECK BAD SHAPE ===");
 
-        // 4.1. Успешное распознавание с лёгким шумом (инверсия 2 пикселей)
+
         System.out.println(">>> TEST 1: some noise (2 dead pixels) - recognition:");
         ShapeSample noisyCircle = DatasetFactory.createDistortedSample(DatasetFactory.CIRCLE, 2, 42);
         testSample(nn, noisyCircle);
@@ -61,6 +62,12 @@ public class Main {
         System.out.println(">>> TEST 2: Loud noise (18 dead pixels) - no recognition:");
         ShapeSample heavyNoisyTriangle = DatasetFactory.createDistortedSample(DatasetFactory.TRIANGLE, 18, 777);
         testSample(nn, heavyNoisyTriangle);
+        System.out.println(">>> TEST 3: Some noise (2 dead pixels) - no recognition - cross:");
+        ShapeSample originalUnknownCross = DatasetFactory.createDistortedSample(DatasetFactory.UNKNOWN_CROSS, 2, 42);
+        testSample(nn, originalUnknownCross);
+
+        LatencyProfiler.benchmarkInference(nn);
+        LatencyProfiler.printMemoryAnalysis(49, 16, 3);
     }
 
     private static void testSample(NeuralNetwork nn, ShapeSample sample) {

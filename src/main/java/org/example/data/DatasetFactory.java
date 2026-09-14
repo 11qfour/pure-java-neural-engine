@@ -45,6 +45,20 @@ public class DatasetFactory {
             new double[]{0.0, 0.0, 1.0}
     );
 
+    public static final ShapeSample UNKNOWN_CROSS = new ShapeSample(
+            "Unknown_Cross",
+            ShapeSample.fromAscii("""
+        ...#...
+        ...#...
+        ...#...
+        #######
+        ...#...
+        ...#...
+        ...#...
+    """),
+            new double[]{0.0, 0.0, 0.0}
+    );
+
     public static List<ShapeSample> getTrainingSet() {
         return List.of(CIRCLE, SQUARE, TRIANGLE);
     }
