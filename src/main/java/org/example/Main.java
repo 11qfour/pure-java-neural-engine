@@ -7,7 +7,7 @@ import org.example.model.NeuralNetwork;
 import java.util.List;
 
 public class Main {
-
+    private static final double CONFIDENCE_THRESHOLD = 0.90;
     public static void main(String[] args) {
         System.out.println("INITIALIZING NETWORK FOR RECOGNITION SHAPE...");
         NeuralNetwork nn = new NeuralNetwork(49,16,3);
@@ -74,8 +74,18 @@ public class Main {
                 bestClass = i;
             }
         }
+        double confidence = output[bestClass];
+        String resultStatus;
+
+        if (confidence >= CONFIDENCE_THRESHOLD) {
+            resultStatus = String.format("RECOGNITION: %-11s (confidence: %.1f%%)",
+                    classNames[bestClass], confidence * 100);
+        } else {
+            resultStatus = String.format("NO RECOGNITION (all max confidence %.1f%% < %.0f%%)",
+                    confidence * 100, CONFIDENCE_THRESHOLD * 100);
+        }
 
         System.out.printf("Shape: %-15s -> Recognition as: %-11s | Probabilities: [Circle: %.3f, Square: %.3f, Triangle: %.3f]%n",
-                sample.name(), classNames[bestClass], output[0], output[1], output[2]);
+                sample.name(), resultStatus, output[0], output[1], output[2]);
     }
 }
