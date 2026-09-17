@@ -32,8 +32,6 @@ public  class LatencyProfiler {
     public static void printMemoryAnalysis(int inputs, int hidden, int outputs) {
         System.out.println("\n=== Memory Usage Analysis ===");
 
-        // W1: inputs * hidden
-        // W2: hidden * outputs
         int w1Count = inputs * hidden;
         int w2Count = hidden * outputs;
         int totalWeights = w1Count + w2Count;

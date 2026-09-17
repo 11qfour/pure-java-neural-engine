@@ -10,6 +10,8 @@ import java.util.List;
 public class Main {
     private static final double CONFIDENCE_THRESHOLD = 0.90;
     public static void main(String[] args) {
+        compareStructures();
+
         System.out.println("INITIALIZING NETWORK FOR RECOGNITION SHAPE...");
         NeuralNetwork nn = new NeuralNetwork(49,16,3);
 
@@ -68,6 +70,43 @@ public class Main {
 
         LatencyProfiler.benchmarkInference(nn);
         LatencyProfiler.printMemoryAnalysis(49, 16, 3);
+    }
+
+    public static void compareStructures() {
+        System.out.println("\n=== Comparison of network structures ===");
+        int[][] topologies = {
+                {49, 8, 3},
+                {49, 16, 3},
+                {49, 32, 3}
+        };
+
+        System.out.printf("%-15s | %-12s | %-10s | %-12s%n",
+                "Topology", "Epochs", "Memory (KB)", "Confidence (2 noises)");
+        System.out.println("-----------------------------------------------------------------");
+
+        for (int[] topo : topologies) {
+            NeuralNetwork net = new NeuralNetwork(topo);
+            int epochs = 0;
+            double err = 1.0;
+
+            while (err > 0.001 && epochs < 20_000) {
+                err = 0.0;
+                for (ShapeSample s : DatasetFactory.getTrainingSet()) {
+                    err += net.trainSample(s.inputs(), s.targets(), 0.3);
+                }
+                epochs++;
+            }
+
+            // Testing resilience against 2 dead pixels.
+            ShapeSample testCircle = DatasetFactory.createDistortedSample(DatasetFactory.CIRCLE, 2, 42);
+            double confidence = net.predict(testCircle.inputs())[0];
+
+            int weights = (topo[0] * topo[1]) + (topo[1] * topo[2]) + topo[1] + topo[2];
+            double memoryKb = (weights * 8) / 1024.0;
+
+            System.out.printf("[%d -> %2d -> %d] | %-12d | %-10.2f | %-12.1f%%%n",
+                    topo[0], topo[1], topo[2], epochs, memoryKb, confidence * 100);
+        }
     }
 
     private static void testSample(NeuralNetwork nn, ShapeSample sample) {
